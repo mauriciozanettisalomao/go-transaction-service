@@ -6,6 +6,11 @@ import (
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/domain"
 )
 
+type TransactionHandler interface {
+	TransactionWriter
+	TransactionRetriever
+}
+
 // TransactionRetriever defines the behavior of a transaction retriever
 type TransactionRetriever interface {
 	ListTransactions(ctx context.Context, limit int) ([]domain.Transaction, error)

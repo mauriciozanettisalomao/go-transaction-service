@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mauriciozanettisalomao/go-transaction-service/internal/adapter/storage"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/domain"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/service"
 )
@@ -20,8 +21,12 @@ func CreateTransaction(ctx *gin.Context) {
 		return
 	}
 
-	req.IdempontencyKey = ctx.GetHeader(xIdempontencyKey)
-	err := service.NewTransactionHandler().Create(ctx, &req)
+	req.SetIdempontencyKey(ctx.GetHeader(xIdempontencyKey))
+	err := service.NewTransactionHandler(
+		service.WithTransactionWriter(storage.NewTransactionMemory()),
+		service.WithTransactionRetriever(storage.NewTransactionMemory()),
+		service.WithUserRetriever(storage.NewUserMemory()),
+	).Create(ctx, &req)
 	if err != nil {
 		handleError(ctx, err)
 		return
@@ -33,7 +38,7 @@ func CreateTransaction(ctx *gin.Context) {
 func ListTransactions(ctx *gin.Context) {
 
 	fmt.Println(" limit", ctx.Query("limit"))
-	limit := 10
+	limit := 10 // default limit
 	limitParam, ok := ctx.GetQuery("limit")
 	if ok {
 		limitConv, err := strconv.Atoi(limitParam)
@@ -44,7 +49,10 @@ func ListTransactions(ctx *gin.Context) {
 		limit = limitConv
 	}
 
-	response, err := service.NewTransactionHandler().List(ctx)
+	response, err := service.NewTransactionHandler(
+		service.WithTransactionRetriever(storage.NewTransactionMemory()),
+		service.WithLimit(limit),
+	).List(ctx)
 	if err != nil {
 		handleError(ctx, err)
 		return

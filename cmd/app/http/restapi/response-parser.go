@@ -38,8 +38,8 @@ func newMeta(limit int) *Metadata {
 
 // errorStatusMap is a map of defined error messages and their corresponding http status codes
 var errorStatusMap = map[error]int{
-	domain.ErrDataNotFound:             http.StatusNotFound,
-	domain.ErrTransactionAlreadyExists: http.StatusConflict,
+	domain.ErrDataNotFound:      http.StatusNotFound,
+	domain.ErrDataAlreadyExists: http.StatusConflict,
 }
 
 // validationError sends an error response for some specific request validation error
