@@ -6,6 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/domain"
+	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/service"
+)
+
+const (
+	xIdempontencyKey = "x-idempontency-key"
 )
 
 func CreateTransaction(ctx *gin.Context) {
@@ -14,6 +19,18 @@ func CreateTransaction(ctx *gin.Context) {
 		validationError(ctx, err)
 		return
 	}
+
+	req.IdempontencyKey = ctx.GetHeader(xIdempontencyKey)
+	err := service.NewTransactionHandler().Create(ctx, &req)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	handleCreatedSuccess(ctx, req, nil)
+}
+
+func ListTransactions(ctx *gin.Context) {
 
 	fmt.Println(" limit", ctx.Query("limit"))
 	limit := 10
@@ -27,37 +44,11 @@ func CreateTransaction(ctx *gin.Context) {
 		limit = limitConv
 	}
 
-	// _, err := ph.svc.CreatePayment(ctx, &payment)
-	// if err != nil {
-	// 	handleError(ctx, err)
-	// 	return
-	// }
+	response, err := service.NewTransactionHandler().List(ctx)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
 
-	handleCreatedSuccess(ctx, map[string]string{"test": "test"}, newMeta(limit))
-}
-
-func ListTransactions(ctx *gin.Context) {
-	// var req listPaymentsRequest
-	// var paymentsList []paymentResponse
-
-	// if err := ctx.ShouldBindQuery(&req); err != nil {
-	// 	validationError(ctx, err)
-	// 	return
-	// }
-
-	// payments, err := ph.svc.ListPayments(ctx, req.Skip, req.Limit)
-	// if err != nil {
-	// 	handleError(ctx, err)
-	// 	return
-	// }
-
-	// for _, payment := range payments {
-	// 	paymentsList = append(paymentsList, newPaymentResponse(&payment))
-	// }
-
-	// total := uint64(len(paymentsList))
-	// meta := newMeta(total, req.Limit, req.Skip)
-	// rsp := toMap(meta, paymentsList, "payments")
-
-	//handleSuccess(ctx, rsp)
+	handleSuccess(ctx, response, newMeta(limit))
 }

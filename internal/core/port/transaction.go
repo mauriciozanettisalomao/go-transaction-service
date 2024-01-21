@@ -8,10 +8,11 @@ import (
 
 // TransactionRetriever defines the behavior of a transaction retriever
 type TransactionRetriever interface {
-	List(ctx context.Context, limit uint64) ([]domain.Transaction, error)
+	ListTransactions(ctx context.Context, limit int) ([]domain.Transaction, error)
+	ValidateTransaction(ctx context.Context, transaction *domain.Transaction) error
 }
 
 // TransactionWriter defines the behavior of a transaction writer
 type TransactionWriter interface {
-	Create(ctx context.Context, transaction domain.Transaction) error
+	CreateTransaction(ctx context.Context, transaction *domain.Transaction) error
 }
