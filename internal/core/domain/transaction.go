@@ -66,7 +66,7 @@ func (t *Transaction) ValidateIdempotency(err error) error {
 // ValidateUserID validates if a transaction has a valid user id
 // the logic is just to handle which error should be returned
 func (t *Transaction) ValidateUserID(key string) error {
-	if key == t.User.ID {
+	if key != t.User.ID {
 		slog.Error("user does not exist",
 			"err", ErrDataNotFound,
 			"userId", t.User.ID,

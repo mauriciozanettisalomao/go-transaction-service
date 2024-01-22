@@ -40,6 +40,7 @@ func newMeta(limit int) *Metadata {
 var errorStatusMap = map[error]int{
 	domain.ErrDataNotFound:      http.StatusNotFound,
 	domain.ErrDataAlreadyExists: http.StatusConflict,
+	domain.ErrInvalidAmount:     http.StatusBadRequest,
 }
 
 // validationError sends an error response for some specific request validation error

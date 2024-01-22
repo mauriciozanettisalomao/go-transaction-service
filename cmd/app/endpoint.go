@@ -10,8 +10,10 @@ func Endpoints() *gin.Engine {
 
 	r := gin.Default()
 
-	r.POST("/v1/transactions", restapi.CreateTransaction)
-	r.GET("/v1/transactions", restapi.ListTransactions)
+	api := restapi.NewTransactionAPI()
+
+	r.POST("/v1/transactions", api.CreateTransaction)
+	r.GET("/v1/transactions", api.ListTransactions)
 
 	return r
 }
