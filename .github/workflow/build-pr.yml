@@ -1,0 +1,48 @@
+name: Build and Test Pull Request
+on:
+  # https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    #runs-on: self-hosted
+    env:
+      working-directory: go/src/github.com/${{ github.repository }} 
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.2'
+      - name: Go Version
+        run: go version
+      - name: Cache Go modules
+        uses: actions/cache@v2
+        with:
+          path: ${{ github.workspace }}/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Configure Git to clone private Github repos
+        run: git config --global url."https://${TOKEN_USER}:${TOKEN}@github.com".insteadOf "https://github.com"
+        env:
+          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN_GO_TRANSACTION_SER }}
+          TOKEN_USER: ${{ secrets.PERSONAL_ACCESS_TOKEN_USER }}
+
+      - name: Setup
+        run: |
+          make setup
+
+      - name: Build
+        run: |
+          make build
+
+      - name: Test
+        run: make test
+
+      - name: Lint
+        run: make lint

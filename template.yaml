@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Template to connect DynamoDB Stream to EventBridge
+
+Resources:
+
+  # DynamoDB Stream
+  DynamoDBTransactionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: transaction
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      StreamSpecification:
+        ## Listen for KEYS_ONLY, NEW_IMAGE, OLD_IMAGE, or NEW_AND_OLD_IMAGES (https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_StreamSpecification.html)
+        StreamViewType: NEW_IMAGE    
+
+  DynamoDBTransactionIdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: transaction_idempotency
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: idempotencyKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: idempotencyKey
+          KeyType: HASH
+
+  # Event Bus (Target)
+  ApplicationEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: TransactionPipesEventBus
+
+  # DLQ for Stream (Source)
+  PipeDLQueue: 
+    Type: AWS::SQS::Queue    
+
+  PipeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - pipes.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: SourcePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dynamodb:DescribeStream"
+                  - "dynamodb:GetRecords"
+                  - "dynamodb:GetShardIterator"
+                  - "dynamodb:ListStreams"
+                  - "sqs:SendMessage"
+                Resource: 
+                  - !GetAtt DynamoDBTransactionTable.StreamArn
+                  - !GetAtt PipeDLQueue.Arn
+        - PolicyName: TargetPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'events:PutEvents'
+                Resource: !GetAtt ApplicationEventBus.Arn
+
+  # EventBridge Pipe              
+  Pipe:
+    Type: AWS::Pipes::Pipe
+    Properties:
+      Name: ddb-eventbridge-transactions
+      Description: "Pipe to connect DDB stream to EventBridge event bus"
+      RoleArn: !GetAtt PipeRole.Arn
+      Source: !GetAtt DynamoDBTransactionTable.StreamArn
+      SourceParameters:
+        DynamoDBStreamParameters:
+          StartingPosition: LATEST
+          BatchSize: 1
+          DeadLetterConfig:
+            Arn: !GetAtt PipeDLQueue.Arn
+      Target: !GetAtt ApplicationEventBus.Arn
+      TargetParameters:
+        EventBridgeEventBusParameters:
+          DetailType: "transactionCreated"
+          Source: "demo.transaction"
+
+  TransactionServiceApiKey:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true # sets for all methods
+
+  TransactionServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: go-transaction-service
+      CodeUri: ./bin/go-transaction-service.zip
+      Runtime: go1.x
+      Timeout: 10
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: 
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
+            - Effect: Allow
+              Action: dynamodb:Gettem
+              Resource: 
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
+      Events:
+        TransactionServiceAPI:
+          Type: Api
+          StageName: Prod
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref TransactionServiceApiKey
+            Auth:
+              ApiKeyRequired: true
+
