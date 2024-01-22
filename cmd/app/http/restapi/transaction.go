@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	xIdempontencyKey = "x-idempontency-key"
+	xIdempotencyKey = "x-idempotency-key"
 )
 
+// CreateTransaction defines the endpoint to create a transaction
 func CreateTransaction(ctx *gin.Context) {
 	var req domain.Transaction
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -21,20 +22,21 @@ func CreateTransaction(ctx *gin.Context) {
 		return
 	}
 
-	req.SetIdempontencyKey(ctx.GetHeader(xIdempontencyKey))
+	req.SetIdempontencyKey(ctx.GetHeader(xIdempotencyKey))
 	err := service.NewTransactionHandler(
 		service.WithTransactionWriter(storage.NewTransactionMemory()),
 		service.WithTransactionRetriever(storage.NewTransactionMemory()),
-		service.WithUserRetriever(storage.NewUserMemory()),
 	).Create(ctx, &req)
 	if err != nil {
 		handleError(ctx, err)
 		return
 	}
 
-	handleCreatedSuccess(ctx, req, nil)
+	handleCreatedSuccess(ctx, req)
 }
 
+// ListTransactions defines the endpoint to list transactions
+// It accepts a query param limit to limit the number of transactions returned
 func ListTransactions(ctx *gin.Context) {
 
 	fmt.Println(" limit", ctx.Query("limit"))

@@ -1,17 +1,17 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/mauriciozanettisalomao/go-transaction-service/cmd/app/http/restapi"
+	"github.com/mauriciozanettisalomao/go-transaction-service/cmd/app"
+	"github.com/mauriciozanettisalomao/go-transaction-service/log"
 )
 
+func init() {
+	log.InitStructureLogConfig()
+}
+
 func main() {
-
-	r := gin.Default()
-
-	r.POST("/transactions", restapi.CreateTransaction)
-	r.GET("/transactions", restapi.ListTransactions)
-
-	// Start server
-	r.Run()
+	err := app.Endpoints().Run()
+	if err != nil {
+		panic(err)
+	}
 }

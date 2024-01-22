@@ -13,9 +13,13 @@ Resources:
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
+        - AttributeName: idempotencyKey
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
+        - AttributeName: idempotencyKey
+          KeyType: RANGE
       StreamSpecification:
         ## Listen for KEYS_ONLY, NEW_IMAGE, OLD_IMAGE, or NEW_AND_OLD_IMAGES (https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_StreamSpecification.html)
         StreamViewType: NEW_IMAGE    

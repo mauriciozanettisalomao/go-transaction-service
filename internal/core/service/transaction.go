@@ -21,11 +21,10 @@ type TransactionHandler interface {
 type transactionService struct {
 	transactionRetriever port.TransactionRetriever
 	transactionWriter    port.TransactionWriter
-	UserRetriever        port.UserRetriever
 	limit                int
 }
 
-// TransactionTransactionOptions helps to configure a transaction service
+// TransactionOptions helps to configure a transaction service
 type TransactionOptions func(*transactionService)
 
 // WithTransactionRetriever sets the transaction retriever
@@ -39,13 +38,6 @@ func WithTransactionRetriever(transactionRetriever port.TransactionRetriever) Tr
 func WithTransactionWriter(transactionWriter port.TransactionWriter) TransactionOptions {
 	return func(ts *transactionService) {
 		ts.transactionWriter = transactionWriter
-	}
-}
-
-// WithUserRetriever sets the user retriever
-func WithUserRetriever(userRetriever port.UserRetriever) TransactionOptions {
-	return func(ts *transactionService) {
-		ts.UserRetriever = userRetriever
 	}
 }
 
@@ -64,14 +56,18 @@ func (ts *transactionService) Create(ctx context.Context, transaction *domain.Tr
 	validations := []func() error{
 		func() error {
 			err := ts.transactionRetriever.ValidateTransaction(ctx, transaction)
+			if err != nil {
+				slog.Error("error validating transaction",
+					"err", err,
+					"transaction", transaction,
+				)
+			}
 			return transaction.ValidateIdempotency(err)
 		},
 		func() error {
-			user, err := ts.UserRetriever.User(ctx, transaction.User.ID)
-			if err != nil {
-				return err
-			}
-			return transaction.ValidateUserID(user.ID)
+			// once the solution to handle users is implemented, this validation should be implemented
+			// Solutions: auth0, cognito, in-house solution, etc
+			return nil
 		},
 		func() error {
 			return transaction.ValidateAmount()

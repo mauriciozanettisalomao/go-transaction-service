@@ -6,6 +6,7 @@ import (
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/domain"
 )
 
+// TransactionHandler defines the behavior of a transaction handler
 type TransactionHandler interface {
 	TransactionWriter
 	TransactionRetriever

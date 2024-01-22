@@ -95,6 +95,6 @@ func handleSuccess(ctx *gin.Context, data any, metadata *Metadata) {
 }
 
 // handleSuccess sends a success response with the specified status code and optional data
-func handleCreatedSuccess(ctx *gin.Context, data any, metadata *Metadata) {
+func handleCreatedSuccess(ctx *gin.Context, data any) {
 	ctx.JSON(http.StatusCreated, data)
 }

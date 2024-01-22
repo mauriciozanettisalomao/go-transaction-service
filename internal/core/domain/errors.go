@@ -13,6 +13,6 @@ var (
 	ErrInvalidUser = errors.New("invalid user")
 	// ErrInvalidAmount is the error returned when the amount is invalid
 	ErrInvalidAmount = errors.New("invalid amount")
-	// ErrInvalidCurrency is the error returned when the currency is invalid
+	// ErrDataAlreadyExists is the error returned when the data already exists
 	ErrDataAlreadyExists = errors.New("data already exists")
 )
