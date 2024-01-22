@@ -22,13 +22,23 @@ SWAGGER_TOOL_VERSION=v0.30.5
 SWAGGER_ASSET="swagger_$(BUILD_HOST)_$(GO_BUILD_ARCH)"
 SWAGGER_ASSET_URL="https://github.com/go-swagger/go-swagger/releases/download/$(SWAGGER_TOOL_VERSION)/$(SWAGGER_ASSET)"
 
-setup-dev: swagger-tool
+setup-dev: swagger-tool swagger-gin
 	@go get -u golang.org/x/tools/cmd/goimports
 	@echo "==> Installing linter..."
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin $(LINT_VERSION)
 	@echo "golangci-lint version:" && golangci-lint version
 
 setup: setup-dev
+
+swagger-gin:
+	@echo "==> Installing swagger tool..."	
+	@go get -u github.com/swaggo/swag/cmd/swag
+	@go get -u github.com/swaggo/gin-swagger
+	@go get -u github.com/swaggo/files
+
+swagger-gin-gen:
+	@echo "==> Generating swagger..."	
+	@swag init -g cmd/app/http/main.go
 
 lint: 
 	@echo "==> Linting..."
@@ -50,18 +60,18 @@ deps:
 prep:
 	@mkdir -p bin/
 
-build-lambda: prep deps
+build-lambda: prep deps swagger-gin-gen
 	@echo "==> Building linux arm64 static AWS binary for linux using go $(shell go version)..."
-	env GIN_MODE=release CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o bin/$(SERVICE) -a $(LDFLAGS) ./cmd/app/lambda/main.go	
+	env GIN_MODE=release CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/$(SERVICE) -a $(LDFLAGS) ./cmd/app/lambda/main.go	
 
-package-lambda: build-lambda
+package-lambda: clean build-lambda
 	@echo "==> Packaging lambda for distribution..."
 	@cd bin && rm -f $(SERVICE).zip && zip -r $(SERVICE).zip . && cd $(ROOT_DIR)
 
 build-mac: build
-build: deps 
+build: deps swagger-gin-gen
 	@echo "==> Building $(GO_BUILD_ARCH) static binary for $(BUILD_HOST) using go $(shell go version)..."
-	env CGO_ENABLED=0 GOOS=$(BUILD_HOST) GOARCH=$(GO_BUILD_ARCH) go build -tags lambda.norpc -o bin/$(SERVICE) -a $(LDFLAGS) ./cmd/app/http/main.go	
+	env CGO_ENABLED=0 GOOS=$(BUILD_HOST) GOARCH=$(GO_BUILD_ARCH) go build -o bin/$(SERVICE) -a $(LDFLAGS) ./cmd/app/http/main.go	
 	chmod +x bin/$(SERVICE)
 
 run-local: build

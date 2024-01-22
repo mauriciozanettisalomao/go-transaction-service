@@ -20,7 +20,23 @@ type transactionAPI struct {
 	svc service.TransactionHandler
 }
 
-// CreateTransaction defines the endpoint to create a transaction
+// CreateTransaction godoc
+//
+//	@Summary		Create a new transaction
+//	@Description	Create transactions made by a certain user
+//	@Tags			transactions
+//	@Accept			json
+//	@Produce		json
+//	@Param			X-Idempotency-Key		header		string				true	"it helps you retry requests safely without accidentally doing the same thing twice. When making or changing an object, use an idempotency key."
+//	@Param			Transaction				body		domain.Transaction	true	"Create Transaction request"
+//	@Success		201						{object}	domain.Transaction		"Transaction created"
+//	@Failure		400						{object}	errorResponse			"Validation error"
+//	@Failure		403						{object}	errorResponse			"Forbidden error"
+//	@Failure		404						{object}	errorResponse			"Data not found error"
+//	@Failure		409						{object}	errorResponse			"Data conflict error"
+//	@Failure		500						{object}	errorResponse			"Internal server error"
+//	@Router			/v1/transactions [post]
+//	@Security		ApiKeyAuth
 func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 	var req domain.Transaction
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -44,8 +60,19 @@ func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 	handleCreatedSuccess(ctx, req)
 }
 
-// ListTransactions defines the endpoint to list transactions
-// It accepts a query param limit to limit the number of transactions returned
+// ListTransactions godoc
+//
+//	@Summary		Create a new transaction
+//	@Description	Create transactions made by a certain user
+//	@Tags			transactions
+//	@Accept			json
+//	@Produce		json
+//	@Param			limit					query		string				true	"The maximum number of records to return per page."
+//	@Success		200						{object}	response				"Successful operation"
+//	@Failure		403						{object}	errorResponse			"Forbidden error"
+//	@Failure		500						{object}	errorResponse			"Internal server error"
+//	@Router			/v1/transactions [get]
+//	@Security		ApiKeyAuth
 func (t *transactionAPI) ListTransactions(ctx *gin.Context) {
 
 	fmt.Println(" limit", ctx.Query("limit"))

@@ -17,7 +17,7 @@ import (
 
 const (
 	transactionTableName         = "transaction"
-	transactionIdempontencyTable = "transaction_idempontency"
+	transactionIdempontencyTable = "transaction_idempotency"
 )
 
 type dynamoDB struct {
@@ -30,7 +30,7 @@ func (d *dynamoDB) CreateTransaction(ctx context.Context, transaction *domain.Tr
 		return err
 	}
 
-	if err := d.idempotentTransaction(ctx, transaction.GetIdempontencyKey()); err != nil {
+	if err := d.idempotentTransaction(ctx, transaction.GetIdempontencyKey(), transaction.ID); err != nil {
 		return err
 	}
 
@@ -40,13 +40,13 @@ func (d *dynamoDB) CreateTransaction(ctx context.Context, transaction *domain.Tr
 func (d *dynamoDB) transaction(ctx context.Context, transaction *domain.Transaction) error {
 
 	type Transaction struct {
-		ID            string
-		UserID        string
-		Currency      string
-		Origin        string
-		OperationType string
-		CreatedAt     string
-		Amount        float64
+		ID            string  `json:"id"`
+		UserID        string  `json:"userId"`
+		Currency      string  `json:"currency"`
+		Origin        string  `json:"origin"`
+		OperationType string  `json:"operationType"`
+		CreatedAt     string  `json:"createdAt"`
+		Amount        float64 `json:"amount"`
 	}
 
 	t := Transaction{
@@ -83,16 +83,22 @@ func (d *dynamoDB) transaction(ctx context.Context, transaction *domain.Transact
 	return nil
 }
 
-func (d *dynamoDB) idempotentTransaction(ctx context.Context, idempotencyKey string) error {
+func (d *dynamoDB) idempotentTransaction(ctx context.Context, idempotencyKey, transacionID string) error {
+
+	if idempotencyKey == "" {
+		return nil
+	}
 
 	type TransactionIdempotency struct {
-		IdempontencyKey string `json:"idempontency_key"`
-		CreatedAt       string `json:"created_at"`
+		IdempotencyKey string `json:"idempotencyKey"`
+		TransactionID  string `json:"transactionId"`
+		CreatedAt      string `json:"createdAt"`
 	}
 
 	ti := TransactionIdempotency{
-		IdempontencyKey: idempotencyKey,
-		CreatedAt:       time.Now().UTC().Format("2006-01-02 15:04:05"),
+		IdempotencyKey: idempotencyKey,
+		TransactionID:  transacionID,
+		CreatedAt:      time.Now().UTC().Format("2006-01-02 15:04:05"),
 	}
 
 	av, err := dynamodbattribute.MarshalMap(ti)
@@ -123,7 +129,7 @@ func (d *dynamoDB) ValidateTransaction(ctx context.Context, transaction *domain.
 
 	response, err := d.svc.GetItem(&dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"idempontency_key": {
+			"idempotencyKey": {
 				S: aws.String(transaction.GetIdempontencyKey()),
 			},
 		},
@@ -137,7 +143,7 @@ func (d *dynamoDB) ValidateTransaction(ctx context.Context, transaction *domain.
 		return err
 	}
 
-	if response.Item["idempontency_key"] != nil {
+	if len(response.Item) > 0 {
 		err := errors.New("transaction already exists")
 		slog.Error("error getting the transaction by idempotency id from dynamodb",
 			"err", err,

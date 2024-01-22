@@ -30,7 +30,7 @@ Resources:
           AttributeType: S
       KeySchema:
         - AttributeName: idempotencyKey
-          KeyType: RANGE
+          KeyType: HASH
 
   # Event Bus (Target)
   ApplicationEventBus:
@@ -82,7 +82,7 @@ Resources:
   Pipe:
     Type: AWS::Pipes::Pipe
     Properties:
-      Name: ddb-to-eventbridge
+      Name: ddb-eventbridge-transactions
       Description: "Pipe to connect DDB stream to EventBridge event bus"
       RoleArn: !GetAtt PipeRole.Arn
       Source: !GetAtt DynamoDBTransactionTable.StreamArn
@@ -108,10 +108,23 @@ Resources:
   TransactionServiceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: main
+      Handler: go-transaction-service
       CodeUri: ./bin/go-transaction-service.zip
       Runtime: go1.x
       Timeout: 10
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: 
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
+            - Effect: Allow
+              Action: dynamodb:Gettem
+              Resource: 
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
       Events:
         TransactionServiceAPI:
           Type: Api
@@ -122,3 +135,4 @@ Resources:
             RestApiId: !Ref TransactionServiceApiKey
             Auth:
               ApiKeyRequired: true
+

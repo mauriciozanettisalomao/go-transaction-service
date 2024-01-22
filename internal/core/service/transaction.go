@@ -50,16 +50,25 @@ func WithLimit(limit int) TransactionOptions {
 
 func (ts *transactionService) Create(ctx context.Context, transaction *domain.Transaction) error {
 
+	slog.Debug("creating transaction",
+		"transaction", transaction,
+		"requestID", ctx.Value("requestID"),
+	)
+
 	errs, ctx := errgroup.WithContext(ctx)
 
 	// validations to be executed in parallel
 	validations := []func() error{
 		func() error {
+			if transaction.GetIdempontencyKey() == "" {
+				return nil
+			}
 			err := ts.transactionRetriever.ValidateTransaction(ctx, transaction)
 			if err != nil {
 				slog.Error("error validating transaction",
 					"err", err,
 					"transaction", transaction,
+					"requestID", ctx.Value("requestID"),
 				)
 			}
 			return transaction.ValidateIdempotency(err)
@@ -93,6 +102,7 @@ func (ts *transactionService) Create(ctx context.Context, transaction *domain.Tr
 					err = fmt.Errorf("recovered for %v", r)
 					slog.Error("error validating request",
 						"err", err,
+						"requestID", ctx.Value("requestID"),
 					)
 				}
 			}()
@@ -101,6 +111,7 @@ func (ts *transactionService) Create(ctx context.Context, transaction *domain.Tr
 
 				slog.Debug("starting validation",
 					"routine", idx,
+					"requestID", ctx.Value("requestID"),
 				)
 
 				err = f()
@@ -108,6 +119,7 @@ func (ts *transactionService) Create(ctx context.Context, transaction *domain.Tr
 					slog.Error("error validation request",
 						"err", err,
 						"routine", idx,
+						"requestID", ctx.Value("requestID"),
 					)
 					break
 				}
@@ -121,6 +133,7 @@ func (ts *transactionService) Create(ctx context.Context, transaction *domain.Tr
 	if err != nil {
 		slog.Error("request is not valid",
 			"err", err,
+			"requestID", ctx.Value("requestID"),
 		)
 		return err
 	}

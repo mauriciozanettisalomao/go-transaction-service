@@ -1,0 +1,148 @@
+definitions:
+  domain.Transaction:
+    properties:
+      amount:
+        type: number
+      createdAt:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      operationType:
+        enum:
+        - debit
+        - credit
+        type: string
+      origin:
+        type: string
+      user:
+        properties:
+          id:
+            type: string
+        required:
+        - id
+        type: object
+    required:
+    - amount
+    - currency
+    - operationType
+    - origin
+    - user
+    type: object
+  restapi.Metadata:
+    properties:
+      limit:
+        example: 10
+        type: integer
+    type: object
+  restapi.errorResponse:
+    properties:
+      messages:
+        example:
+        - Error message 1
+        - ' Error message 2'
+        items:
+          type: string
+        type: array
+    type: object
+  restapi.response:
+    properties:
+      data: {}
+      metadata:
+        $ref: '#/definitions/restapi.Metadata'
+    type: object
+info:
+  contact:
+    email: mauriciozanetti86@gmail.com
+    name: Mauricio Zanetti Salomao
+    url: https://github.com/mauriciozanettisalomao/go-transaction-service
+  description: This is a sample server for a transaction service.
+  license:
+    name: MIT
+    url: https://github.com/mauriciozanettisalomao/go-transaction-service/blob/main/LICENSE
+  title: Go Transaction Service API
+  version: "1.0"
+paths:
+  /v1/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Create transactions made by a certain user
+      parameters:
+      - description: The maximum number of records to return per page.
+        in: query
+        name: limit
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful operation
+          schema:
+            $ref: '#/definitions/restapi.response'
+        "403":
+          description: Forbidden error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new transaction
+      tags:
+      - transactions
+    post:
+      consumes:
+      - application/json
+      description: Create transactions made by a certain user
+      parameters:
+      - description: it helps you retry requests safely without accidentally doing
+          the same thing twice. When making or changing an object, use an idempotency
+          key.
+        in: header
+        name: X-Idempotency-Key
+        required: true
+        type: string
+      - description: Create Transaction request
+        in: body
+        name: Transaction
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Transaction'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Transaction created
+          schema:
+            $ref: '#/definitions/domain.Transaction'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+        "403":
+          description: Forbidden error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+        "404":
+          description: Data not found error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+        "409":
+          description: Data conflict error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new transaction
+      tags:
+      - transactions
+swagger: "2.0"
