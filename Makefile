@@ -32,9 +32,11 @@ setup: setup-dev
 
 swagger-gin:
 	@echo "==> Installing swagger tool..."	
+	@export GOBIN=$(go env GOPATH)/bin
 	@go get -u github.com/swaggo/swag/cmd/swag
 	@go get -u github.com/swaggo/gin-swagger
 	@go get -u github.com/swaggo/files
+	@go install github.com/swaggo/swag/cmd/swag
 
 swagger-gin-gen:
 	@echo "==> Generating swagger..."	

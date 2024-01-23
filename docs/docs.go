@@ -27,10 +27,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "X-API-Key": []
                     }
                 ],
-                "description": "Create transactions made by a certain user",
+                "description": "Subscribe to be notified when a new transaction is created",
                 "consumes": [
                     "application/json"
                 ],
@@ -40,19 +40,21 @@ const docTemplate = `{
                 "tags": [
                     "transactions"
                 ],
-                "summary": "Create a new transaction",
+                "summary": "Subscribe to listen the the new transactions",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "The maximum number of records to return per page.",
-                        "name": "limit",
-                        "in": "query",
-                        "required": true
+                        "description": "Create Transaction request",
+                        "name": "Transaction",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Transaction"
+                        }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Successful operation",
+                    "201": {
+                        "description": "Subscription created",
                         "schema": {
                             "$ref": "#/definitions/restapi.responseTransaction"
                         }
@@ -74,7 +76,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "X-API-Key": []
                     }
                 ],
                 "description": "Create transactions made by a certain user",
@@ -234,6 +236,13 @@ const docTemplate = `{
                     "$ref": "#/definitions/restapi.Metadata"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "X-API-Key": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

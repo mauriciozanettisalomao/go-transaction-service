@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ExecutionTimeMiddleware is a middleware that logs the execution time of the request
+// ExecutionTime is a middleware that logs the execution time of the request
 func ExecutionTime() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tsReq := time.Now()

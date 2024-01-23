@@ -94,7 +94,7 @@ func TestCreateTransaction(t *testing.T) {
 			}
 
 			api := &transactionAPI{
-				svc: mock,
+				svcTransaction: mock,
 			}
 
 			request, _ := gin.CreateTestContext(httptest.NewRecorder())

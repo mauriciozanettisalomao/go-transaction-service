@@ -19,6 +19,10 @@ func init() {
 //
 // @license.name			MIT
 // @license.url				https://github.com/mauriciozanettisalomao/go-transaction-service/blob/main/LICENSE
+//
+// @securityDefinitions.apikey X-API-Key
+// @in header
+// @name Authorization
 func main() {
 	err := app.Endpoints().Run()
 	if err != nil {

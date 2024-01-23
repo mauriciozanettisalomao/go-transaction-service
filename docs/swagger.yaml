@@ -74,18 +74,19 @@ paths:
     get:
       consumes:
       - application/json
-      description: Create transactions made by a certain user
+      description: Subscribe to be notified when a new transaction is created
       parameters:
-      - description: The maximum number of records to return per page.
-        in: query
-        name: limit
+      - description: Create Transaction request
+        in: body
+        name: Transaction
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/domain.Transaction'
       produces:
       - application/json
       responses:
-        "200":
-          description: Successful operation
+        "201":
+          description: Subscription created
           schema:
             $ref: '#/definitions/restapi.responseTransaction'
         "403":
@@ -97,8 +98,8 @@ paths:
           schema:
             $ref: '#/definitions/restapi.errorResponse'
       security:
-      - ApiKeyAuth: []
-      summary: Create a new transaction
+      - X-API-Key: []
+      summary: Subscribe to listen the the new transactions
       tags:
       - transactions
     post:
@@ -147,8 +148,13 @@ paths:
           schema:
             $ref: '#/definitions/restapi.errorResponse'
       security:
-      - ApiKeyAuth: []
+      - X-API-Key: []
       summary: Create a new transaction
       tags:
       - transactions
+securityDefinitions:
+  X-API-Key:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

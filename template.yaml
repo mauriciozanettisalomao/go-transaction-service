@@ -38,6 +38,35 @@ Resources:
     Properties:
       Name: TransactionPipesEventBus
 
+  TransactionSnsTopic:
+    Type: AWS::SNS::Topic
+
+  EventRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "EventRule"
+      EventPattern: 
+        account: 
+          - !Sub '${AWS::AccountId}'
+        source:
+          - "transaction.notification"
+      Targets: 
+        - Arn: !Ref TransactionSnsTopic
+          Id: "SNStopic"
+
+  EventBridgeToToSnsPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties: 
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref TransactionSnsTopic
+      Topics: 
+        - !Ref TransactionSnsTopic
+
   # DLQ for Stream (Source)
   PipeDLQueue: 
     Type: AWS::SQS::Queue    
@@ -115,7 +144,10 @@ Resources:
       Environment:
         Variables:
           USE_DYNAMODB: "true"
+          TRANSACTION_SNS_TOPIC_ARN: !Ref TransactionSnsTopic
       Policies:
+        - SNSCrudPolicy:
+            TopicName: !GetAtt TransactionSnsTopic.TopicName
         - Version: 2012-10-17
           Statement:
             - Effect: Allow

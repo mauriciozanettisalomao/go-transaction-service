@@ -28,18 +28,18 @@ type dynamoDB struct {
 
 func (d *dynamoDB) CreateTransaction(ctx context.Context, transaction *domain.Transaction) error {
 
-	if err := d.transaction(ctx, transaction); err != nil {
+	if err := d.transaction(transaction); err != nil {
 		return err
 	}
 
-	if err := d.idempotentTransaction(ctx, transaction.GetIdempontencyKey(), transaction.ID); err != nil {
+	if err := d.idempotentTransaction(transaction.GetIdempontencyKey(), transaction.ID); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (d *dynamoDB) transaction(ctx context.Context, transaction *domain.Transaction) error {
+func (d *dynamoDB) transaction(transaction *domain.Transaction) error {
 
 	type Transaction struct {
 		ID            string  `json:"id"`
@@ -85,7 +85,7 @@ func (d *dynamoDB) transaction(ctx context.Context, transaction *domain.Transact
 	return nil
 }
 
-func (d *dynamoDB) idempotentTransaction(ctx context.Context, idempotencyKey, transacionID string) error {
+func (d *dynamoDB) idempotentTransaction(idempotencyKey, transacionID string) error {
 
 	if idempotencyKey == "" {
 		return nil
@@ -186,9 +186,9 @@ func (d *dynamoDB) ListTransactions(ctx context.Context, limit int, next string)
 
 	nextID := ""
 	if output.LastEvaluatedKey != nil {
-		next, err := d.nextID(*output)
-		if err != nil {
-			return nil, err
+		next, errNextId := d.nextID(*output)
+		if errNextId != nil {
+			return nil, errNextId
 		}
 		nextID = next
 	}
@@ -217,7 +217,14 @@ func (d *dynamoDB) nextID(result dynamodb.ScanOutput) (string, error) {
 	lekOutPut := ""
 	if result.LastEvaluatedKey != nil {
 		lek := map[string]interface{}{}
-		dynamodbattribute.UnmarshalMap(result.LastEvaluatedKey, &lek)
+		err := dynamodbattribute.UnmarshalMap(result.LastEvaluatedKey, &lek)
+		if err != nil {
+			slog.Error("error unmarshalling the last evaluated key",
+				"err", err,
+				"lastEvaluatedKey", result.LastEvaluatedKey,
+			)
+			return lekOutPut, err
+		}
 		lastKey, err := json.Marshal(lek)
 		if err != nil {
 			slog.Error("error marshalling the last evaluated key",

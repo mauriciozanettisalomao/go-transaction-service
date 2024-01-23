@@ -21,8 +21,8 @@ type TransactionHandler interface {
 type transactionService struct {
 	transactionRetriever port.TransactionRetriever
 	transactionWriter    port.TransactionWriter
-	limit                int
 	next                 string
+	limit                int
 }
 
 // TransactionOptions helps to configure a transaction service

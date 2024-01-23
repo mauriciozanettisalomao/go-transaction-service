@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mauriciozanettisalomao/go-transaction-service/internal/adapter/notification"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/adapter/storage"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/domain"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/port"
@@ -18,7 +19,8 @@ const (
 )
 
 type transactionAPI struct {
-	svc service.TransactionHandler
+	svcTransaction  service.TransactionHandler
+	svcSubscription service.SubscriptionHandler
 }
 
 // CreateTransaction godoc
@@ -37,7 +39,7 @@ type transactionAPI struct {
 //	@Failure		409						{object}	errorResponse			"Data conflict error"
 //	@Failure		500						{object}	errorResponse			"Internal server error"
 //	@Router			/v1/transactions [post]
-//	@Security		ApiKeyAuth
+//	@Security		X-API-Key
 func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 	var req domain.Transaction
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -46,13 +48,13 @@ func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 	}
 
 	req.SetIdempontencyKey(ctx.GetHeader(xIdempotencyKey))
-	if t.svc == nil {
-		t.svc = service.NewTransactionHandler(
+	if t.svcTransaction == nil {
+		t.svcTransaction = service.NewTransactionHandler(
 			service.WithTransactionWriter(storageLayerByEnv()),
 			service.WithTransactionRetriever(storageLayerByEnv()),
 		)
 	}
-	err := t.svc.Create(ctx, &req)
+	err := t.svcTransaction.Create(ctx, &req)
 	if err != nil {
 		handleError(ctx, err)
 		return
@@ -73,7 +75,7 @@ func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 //	@Failure		403						{object}	errorResponse			"Forbidden error"
 //	@Failure		500						{object}	errorResponse			"Internal server error"
 //	@Router			/v1/transactions [get]
-//	@Security		ApiKeyAuth
+//	@Security		X-API-Key
 func (t *transactionAPI) ListTransactions(ctx *gin.Context) {
 
 	fmt.Println(" limit", ctx.Query("limit"))
@@ -112,6 +114,41 @@ func storageLayerByEnv() port.TransactionHandler {
 		}
 	}
 	return storage.NewTransactionMemory()
+}
+
+// SubscribeListenTransactions godoc
+//
+//	@Summary		Subscribe to listen the the new transactions
+//	@Description	Subscribe to be notified when a new transaction is created
+//	@Tags			transactions
+//	@Accept			json
+//	@Produce		json
+//	@Param			Transaction				body		domain.Transaction	true	"Create Transaction request"
+//	@Success		201						{object}	responseTransaction			"Subscription created"
+//	@Failure		403						{object}	errorResponse			"Forbidden error"
+//	@Failure		500						{object}	errorResponse			"Internal server error"
+//	@Router			/v1/transactions [get]
+//	@Security		X-API-Key
+func (t *transactionAPI) SubscribeListenTransactions(ctx *gin.Context) {
+
+	var req domain.Subscription
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		validationError(ctx, err)
+		return
+	}
+
+	if t.svcSubscription == nil {
+		t.svcSubscription = service.NewSubscriptorService(
+			service.WithSubscriptor(notification.NewSubscriptionMemory()),
+		)
+	}
+	err := t.svcSubscription.Subscribe(ctx, &req)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	handleCreatedSuccess(ctx, req)
 }
 
 // NewTransactionAPI creates an instance of a transaction API
