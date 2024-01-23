@@ -2,10 +2,12 @@ package restapi
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mauriciozanettisalomao/go-transaction-service/internal/adapter/notification"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/adapter/storage"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/domain"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/port"
@@ -17,7 +19,8 @@ const (
 )
 
 type transactionAPI struct {
-	svc service.TransactionHandler
+	svcTransaction  service.TransactionHandler
+	svcSubscription service.SubscriptionHandler
 }
 
 // CreateTransaction godoc
@@ -36,7 +39,7 @@ type transactionAPI struct {
 //	@Failure		409						{object}	errorResponse			"Data conflict error"
 //	@Failure		500						{object}	errorResponse			"Internal server error"
 //	@Router			/v1/transactions [post]
-//	@Security		ApiKeyAuth
+//	@Security		X-API-Key
 func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 	var req domain.Transaction
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -45,13 +48,13 @@ func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 	}
 
 	req.SetIdempontencyKey(ctx.GetHeader(xIdempotencyKey))
-	if t.svc == nil {
-		t.svc = service.NewTransactionHandler(
+	if t.svcTransaction == nil {
+		t.svcTransaction = service.NewTransactionHandler(
 			service.WithTransactionWriter(storageLayerByEnv()),
 			service.WithTransactionRetriever(storageLayerByEnv()),
 		)
 	}
-	err := t.svc.Create(ctx, &req)
+	err := t.svcTransaction.Create(ctx, &req)
 	if err != nil {
 		handleError(ctx, err)
 		return
@@ -68,11 +71,11 @@ func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			limit					query		string				true	"The maximum number of records to return per page."
-//	@Success		200						{object}	response				"Successful operation"
+//	@Success		200						{object}	responseTransaction			"Successful operation"
 //	@Failure		403						{object}	errorResponse			"Forbidden error"
 //	@Failure		500						{object}	errorResponse			"Internal server error"
 //	@Router			/v1/transactions [get]
-//	@Security		ApiKeyAuth
+//	@Security		X-API-Key
 func (t *transactionAPI) ListTransactions(ctx *gin.Context) {
 
 	fmt.Println(" limit", ctx.Query("limit"))
@@ -81,14 +84,18 @@ func (t *transactionAPI) ListTransactions(ctx *gin.Context) {
 	if ok {
 		limitConv, err := strconv.Atoi(limitParam)
 		if err != nil {
-			fmt.Println(err)
-
+			slog.Error("error converting limit to int",
+				"err", err,
+				"limit", limitParam,
+			)
+			handleError(ctx, err)
 		}
 		limit = limitConv
 	}
 
-	response, err := service.NewTransactionHandler(
+	response, next, err := service.NewTransactionHandler(
 		service.WithTransactionRetriever(storageLayerByEnv()),
+		service.WithNext(ctx.Query("next")),
 		service.WithLimit(limit),
 	).List(ctx)
 	if err != nil {
@@ -96,16 +103,62 @@ func (t *transactionAPI) ListTransactions(ctx *gin.Context) {
 		return
 	}
 
-	handleSuccess(ctx, response, newMeta(limit))
+	handleSuccess(ctx, response, newMeta(limit, next))
 }
 
-// not a best way to check if it is running in a lambda environment
-// it should be refactored to use a proper environment variable
+// simple way to switch between memory and dynamodb
 func storageLayerByEnv() port.TransactionHandler {
-	if _, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME"); ok {
-		return storage.NewDynamoDB()
+	if value, ok := os.LookupEnv("USE_DYNAMODB"); ok {
+		if value == "true" {
+			return storage.NewDynamoDB()
+		}
 	}
 	return storage.NewTransactionMemory()
+}
+
+// SubscribeListenTransactions godoc
+//
+//	@Summary		Subscribe to listen the the new transactions
+//	@Description	Subscribe to be notified when a new transaction is created
+//	@Tags			transactions
+//	@Accept			json
+//	@Produce		json
+//	@Param			Transaction				body		domain.Subscription	true	"Create Transaction request"
+//	@Success		201						{object}	domain.Subscription			"Subscription created"
+//	@Failure		403						{object}	errorResponse			"Forbidden error"
+//	@Failure		500						{object}	errorResponse			"Internal server error"
+//	@Router			/v1/transactions/subscribe [post]
+//	@Security		X-API-Key
+func (t *transactionAPI) SubscribeListenTransactions(ctx *gin.Context) {
+
+	var req domain.Subscription
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		validationError(ctx, err)
+		return
+	}
+
+	if t.svcSubscription == nil {
+		t.svcSubscription = service.NewSubscriptorService(
+			service.WithSubscriptor(notificationLayerByEnv()),
+		)
+	}
+	err := t.svcSubscription.Subscribe(ctx, &req)
+	if err != nil {
+		handleError(ctx, err)
+		return
+	}
+
+	handleCreatedSuccess(ctx, req)
+}
+
+// simple way to switch between memory and dynamodb
+func notificationLayerByEnv() port.Subscriptor {
+	if value, ok := os.LookupEnv("USE_SNS"); ok {
+		if value == "true" {
+			return notification.NewSubscriptionSnsTopic()
+		}
+	}
+	return notification.NewSubscriptionMemory()
 }
 
 // NewTransactionAPI creates an instance of a transaction API

@@ -23,6 +23,7 @@ func Endpoints() *gin.Engine {
 	api := restapi.NewTransactionAPI()
 
 	r.POST("/v1/transactions", api.CreateTransaction)
+	r.POST("/v1/transactions/subscribe", api.SubscribeListenTransactions)
 	r.GET("/v1/transactions", api.ListTransactions)
 
 	r.GET("/v1/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))

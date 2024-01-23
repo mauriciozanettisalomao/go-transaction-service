@@ -27,7 +27,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "X-API-Key": []
                     }
                 ],
                 "description": "Create transactions made by a certain user",
@@ -54,7 +54,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful operation",
                         "schema": {
-                            "$ref": "#/definitions/restapi.response"
+                            "$ref": "#/definitions/restapi.responseTransaction"
                         }
                     },
                     "403": {
@@ -74,7 +74,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "X-API-Key": []
                     }
                 ],
                 "description": "Create transactions made by a certain user",
@@ -145,9 +145,78 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/transactions/subscribe": {
+            "post": {
+                "security": [
+                    {
+                        "X-API-Key": []
+                    }
+                ],
+                "description": "Subscribe to be notified when a new transaction is created",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Subscribe to listen the the new transactions",
+                "parameters": [
+                    {
+                        "description": "Create Transaction request",
+                        "name": "Transaction",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Subscription"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Subscription created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Subscription"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden error",
+                        "schema": {
+                            "$ref": "#/definitions/restapi.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/restapi.errorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "domain.Subscription": {
+            "type": "object",
+            "required": [
+                "endpoint",
+                "protocol"
+            ],
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "protocol": {
+                    "type": "string",
+                    "enum": [
+                        "email"
+                    ]
+                }
+            }
+        },
         "domain.Transaction": {
             "type": "object",
             "required": [
@@ -199,6 +268,10 @@ const docTemplate = `{
                 "limit": {
                     "type": "integer",
                     "example": 10
+                },
+                "next": {
+                    "type": "string",
+                    "example": "http://localhost:8080/v1/transactions?limit=10\u0026next=eyJpZGVtcG9udGVuY2llS2V5IjoiMTIzNDU2Nzg5MCIsImxpbWl0IjoxMH0="
                 }
             }
         },
@@ -217,14 +290,26 @@ const docTemplate = `{
                 }
             }
         },
-        "restapi.response": {
+        "restapi.responseTransaction": {
             "type": "object",
             "properties": {
-                "data": {},
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Transaction"
+                    }
+                },
                 "metadata": {
                     "$ref": "#/definitions/restapi.Metadata"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "X-API-Key": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

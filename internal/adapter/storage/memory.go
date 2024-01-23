@@ -25,7 +25,7 @@ func (m *transactionMemory) CreateTransaction(ctx context.Context, transaction *
 	return nil
 }
 
-func (m *transactionMemory) ListTransactions(ctx context.Context, limit int) ([]domain.Transaction, error) {
+func (m *transactionMemory) ListTransactions(ctx context.Context, limit int, next string) ([]domain.Transaction, error) {
 	return transactions, nil
 }
 

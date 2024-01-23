@@ -38,6 +38,36 @@ Resources:
     Properties:
       Name: TransactionPipesEventBus
 
+  TransactionSnsTopic:
+    Type: AWS::SNS::Topic
+
+  EventRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      EventBusName: !Ref ApplicationEventBus
+      Description: "EventRule"
+      EventPattern: 
+        account: 
+          - !Sub '${AWS::AccountId}'
+        source:
+          - "demo.transaction"
+      Targets: 
+        - Arn: !Ref TransactionSnsTopic
+          Id: "SNStopic"
+
+  EventBridgeToToSnsPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties: 
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref TransactionSnsTopic
+      Topics: 
+        - !Ref TransactionSnsTopic
+
   # DLQ for Stream (Source)
   PipeDLQueue: 
     Type: AWS::SQS::Queue    
@@ -112,7 +142,14 @@ Resources:
       CodeUri: ./bin/go-transaction-service.zip
       Runtime: go1.x
       Timeout: 10
+      Environment:
+        Variables:
+          USE_DYNAMODB: "true"
+          USE_SNS: "true"
+          TRANSACTION_SNS_TOPIC_ARN: !Ref TransactionSnsTopic
       Policies:
+        - SNSCrudPolicy:
+            TopicName: !GetAtt TransactionSnsTopic.TopicName
         - Version: 2012-10-17
           Statement:
             - Effect: Allow
@@ -121,10 +158,13 @@ Resources:
                 - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction"
                 - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
             - Effect: Allow
-              Action: dynamodb:Gettem
+              Action: dynamodb:GetItem
+              Resource: 
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
+            - Effect: Allow
+              Action: dynamodb:Scan
               Resource: 
                 - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction"
-                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
       Events:
         TransactionServiceAPI:
           Type: Api

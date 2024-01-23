@@ -16,6 +16,12 @@ type response struct {
 	Metadata *Metadata `json:"metadata,omitempty"`
 }
 
+// responseTransaction represents a response body format for a list of transactions, only used for swagger documentation
+type responseTransaction struct { // nolint - used only for swagger documentation
+	Data     []domain.Transaction `json:"data,omitempty"`
+	Metadata *Metadata            `json:"metadata,omitempty"`
+}
+
 // newResponse is a helper function to create a response body
 func newResponse(data any, metadata *Metadata) response {
 	return response{
@@ -26,13 +32,15 @@ func newResponse(data any, metadata *Metadata) response {
 
 // Metadata represents metadata for a paginated response
 type Metadata struct {
-	Limit int `json:"limit" example:"10"`
+	Next  string `json:"next,omitempty" example:"http://localhost:8080/v1/transactions?limit=10&next=eyJpZGVtcG9udGVuY2llS2V5IjoiMTIzNDU2Nzg5MCIsImxpbWl0IjoxMH0="`
+	Limit int    `json:"limit,omitempty" example:"10"`
 }
 
 // newMeta is a helper function to create metadata for a paginated response
-func newMeta(limit int) *Metadata {
+func newMeta(limit int, next string) *Metadata {
 	return &Metadata{
 		Limit: limit,
+		Next:  next,
 	}
 }
 

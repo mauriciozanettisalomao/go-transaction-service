@@ -15,12 +15,13 @@ import (
 // TransactionHandler defines the behavior of a transaction handler
 type TransactionHandler interface {
 	Create(context.Context, *domain.Transaction) error
-	List(context.Context) ([]domain.Transaction, error)
+	List(context.Context) ([]domain.Transaction, string, error)
 }
 
 type transactionService struct {
 	transactionRetriever port.TransactionRetriever
 	transactionWriter    port.TransactionWriter
+	next                 string
 	limit                int
 }
 
@@ -38,6 +39,13 @@ func WithTransactionRetriever(transactionRetriever port.TransactionRetriever) Tr
 func WithTransactionWriter(transactionWriter port.TransactionWriter) TransactionOptions {
 	return func(ts *transactionService) {
 		ts.transactionWriter = transactionWriter
+	}
+}
+
+// WithNext sets the next token for a paginated response
+func WithNext(next string) TransactionOptions {
+	return func(ts *transactionService) {
+		ts.next = next
 	}
 }
 
@@ -141,8 +149,22 @@ func (ts *transactionService) Create(ctx context.Context, transaction *domain.Tr
 	return ts.transactionWriter.CreateTransaction(ctx, transaction.Build())
 }
 
-func (ts *transactionService) List(ctx context.Context) ([]domain.Transaction, error) {
-	return ts.transactionRetriever.ListTransactions(ctx, ts.limit)
+func (ts *transactionService) List(ctx context.Context) ([]domain.Transaction, string, error) {
+	transactions, err := ts.transactionRetriever.ListTransactions(ctx, ts.limit, ts.next)
+	if err != nil {
+		slog.Error("error listing transactions",
+			"err", err,
+			"requestID", ctx.Value("requestID"),
+		)
+		return nil, "", err
+	}
+
+	nextKey := ""
+	for i := range transactions {
+		nextKey = transactions[i].GetNext()
+	}
+
+	return transactions, nextKey, nil
 }
 
 // NewTransactionHandler creates an instance new transaction handler

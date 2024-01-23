@@ -1,4 +1,16 @@
 definitions:
+  domain.Subscription:
+    properties:
+      endpoint:
+        type: string
+      protocol:
+        enum:
+        - email
+        type: string
+    required:
+    - endpoint
+    - protocol
+    type: object
   domain.Transaction:
     properties:
       amount:
@@ -35,6 +47,9 @@ definitions:
       limit:
         example: 10
         type: integer
+      next:
+        example: http://localhost:8080/v1/transactions?limit=10&next=eyJpZGVtcG9udGVuY2llS2V5IjoiMTIzNDU2Nzg5MCIsImxpbWl0IjoxMH0=
+        type: string
     type: object
   restapi.errorResponse:
     properties:
@@ -46,9 +61,12 @@ definitions:
           type: string
         type: array
     type: object
-  restapi.response:
+  restapi.responseTransaction:
     properties:
-      data: {}
+      data:
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
       metadata:
         $ref: '#/definitions/restapi.Metadata'
     type: object
@@ -81,7 +99,7 @@ paths:
         "200":
           description: Successful operation
           schema:
-            $ref: '#/definitions/restapi.response'
+            $ref: '#/definitions/restapi.responseTransaction'
         "403":
           description: Forbidden error
           schema:
@@ -91,7 +109,7 @@ paths:
           schema:
             $ref: '#/definitions/restapi.errorResponse'
       security:
-      - ApiKeyAuth: []
+      - X-API-Key: []
       summary: Create a new transaction
       tags:
       - transactions
@@ -141,8 +159,45 @@ paths:
           schema:
             $ref: '#/definitions/restapi.errorResponse'
       security:
-      - ApiKeyAuth: []
+      - X-API-Key: []
       summary: Create a new transaction
       tags:
       - transactions
+  /v1/transactions/subscribe:
+    post:
+      consumes:
+      - application/json
+      description: Subscribe to be notified when a new transaction is created
+      parameters:
+      - description: Create Transaction request
+        in: body
+        name: Transaction
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Subscription'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Subscription created
+          schema:
+            $ref: '#/definitions/domain.Subscription'
+        "403":
+          description: Forbidden error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+      security:
+      - X-API-Key: []
+      summary: Subscribe to listen the the new transactions
+      tags:
+      - transactions
+securityDefinitions:
+  X-API-Key:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

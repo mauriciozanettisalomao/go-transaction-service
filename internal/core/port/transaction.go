@@ -14,7 +14,7 @@ type TransactionHandler interface {
 
 // TransactionRetriever defines the behavior of a transaction retriever
 type TransactionRetriever interface {
-	ListTransactions(ctx context.Context, limit int) ([]domain.Transaction, error)
+	ListTransactions(ctx context.Context, limit int, next string) ([]domain.Transaction, error)
 	ValidateTransaction(ctx context.Context, transaction *domain.Transaction) error
 }
 
