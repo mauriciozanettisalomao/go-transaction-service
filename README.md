@@ -77,3 +77,8 @@ curl --location 'https://{{hostname}}/v1/transactions' \
 ```
 
 ### List transactions
+
+```
+curl --location 'https://{{hostname}}/v1/transactions?limit=3&next={{token}}' \
+--header 'x-api-key: ******' 
+```
