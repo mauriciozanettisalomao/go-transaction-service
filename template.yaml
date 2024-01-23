@@ -112,6 +112,9 @@ Resources:
       CodeUri: ./bin/go-transaction-service.zip
       Runtime: go1.x
       Timeout: 10
+      Environment:
+        Variables:
+          USE_DYNAMODB: "true"
       Policies:
         - Version: 2012-10-17
           Statement:
@@ -121,10 +124,13 @@ Resources:
                 - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction"
                 - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
             - Effect: Allow
-              Action: dynamodb:Gettem
+              Action: dynamodb:GetItem
+              Resource: 
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
+            - Effect: Allow
+              Action: dynamodb:Scan
               Resource: 
                 - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction"
-                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transaction_idempotency"
       Events:
         TransactionServiceAPI:
           Type: Api

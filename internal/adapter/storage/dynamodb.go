@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"time"
@@ -155,8 +157,102 @@ func (d *dynamoDB) ValidateTransaction(ctx context.Context, transaction *domain.
 	return nil
 }
 
-func (d *dynamoDB) ListTransactions(ctx context.Context, limit int) ([]domain.Transaction, error) {
-	return nil, nil
+func (d *dynamoDB) ListTransactions(ctx context.Context, limit int, next string) ([]domain.Transaction, error) {
+
+	input := &dynamodb.ScanInput{
+		TableName: aws.String(transactionTableName),
+		Limit:     aws.Int64(int64(limit)),
+	}
+	if next != "" {
+		nextID, err := d.deserializeNextID(next)
+		if err != nil {
+			slog.Error("error deserializing the next id",
+				"err", err,
+				"next", next,
+			)
+			return nil, err
+		}
+		input.ExclusiveStartKey = nextID
+	}
+
+	output, err := d.svc.Scan(input)
+	if err != nil {
+		slog.Error("error getting the transaction by idempotency id from dynamodb",
+			"err", err,
+			"limit", limit,
+		)
+		return nil, err
+	}
+
+	nextID := ""
+	if output.LastEvaluatedKey != nil {
+		next, err := d.nextID(*output)
+		if err != nil {
+			return nil, err
+		}
+		nextID = next
+	}
+
+	var transactions []domain.Transaction
+	for _, i := range output.Items {
+		var t domain.Transaction
+		err = dynamodbattribute.UnmarshalMap(i, &t)
+		if err != nil {
+			slog.Error("error unmarshalling the transaction",
+				"err", err,
+				"item", i,
+			)
+			return nil, err
+		}
+		t.SetNext(nextID)
+		t.User.ID = *i["userId"].S
+		transactions = append(transactions, t)
+	}
+
+	return transactions, nil
+}
+
+func (d *dynamoDB) nextID(result dynamodb.ScanOutput) (string, error) {
+
+	lekOutPut := ""
+	if result.LastEvaluatedKey != nil {
+		lek := map[string]interface{}{}
+		dynamodbattribute.UnmarshalMap(result.LastEvaluatedKey, &lek)
+		lastKey, err := json.Marshal(lek)
+		if err != nil {
+			slog.Error("error marshalling the last evaluated key",
+				"err", err,
+				"lastEvaluatedKey", result.LastEvaluatedKey,
+			)
+			return lekOutPut, err
+		}
+		lekOutPut = base64.StdEncoding.EncodeToString(lastKey)
+	}
+
+	return lekOutPut, nil
+
+}
+
+func (d *dynamoDB) deserializeNextID(input string) (map[string]*dynamodb.AttributeValue, error) {
+	bytesJSON, err := base64.StdEncoding.DecodeString(input)
+	if err != nil {
+		slog.Error("error decoding the next id",
+			"err", err,
+			"input", input,
+		)
+		return nil, err
+	}
+	outputJSON := map[string]interface{}{}
+	err = json.Unmarshal(bytesJSON, &outputJSON)
+	if err != nil {
+		slog.Error("error unmarshalling the next id",
+			"err", err,
+			"json", string(bytesJSON),
+		)
+		return nil, err
+	}
+
+	return dynamodbattribute.MarshalMap(outputJSON)
 }
 
 // NewDynamoDB returns a new DynamoDB instance

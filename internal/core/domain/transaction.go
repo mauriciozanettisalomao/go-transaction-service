@@ -20,6 +20,7 @@ type Transaction struct {
 	OperationType   string `json:"operationType"  binding:"required,oneof=debit credit"`
 	CreatedAt       string `json:"createdAt"`
 	idempontencyKey string
+	next            string
 	Amount          float64 `json:"amount"  binding:"required"`
 }
 
@@ -40,6 +41,11 @@ func (t *Transaction) SetID(id string) {
 	t.ID = id
 }
 
+// SetNext sets the next token for a paginated response
+func (t *Transaction) SetNext(next string) {
+	t.next = next
+}
+
 // SetIdempontencyKey sets the idempontency key for a transaction
 func (t *Transaction) SetIdempontencyKey(key string) {
 	t.idempontencyKey = key
@@ -48,6 +54,11 @@ func (t *Transaction) SetIdempontencyKey(key string) {
 // GetIdempontencyKey gets the idempontency key for a transaction
 func (t *Transaction) GetIdempontencyKey() string {
 	return t.idempontencyKey
+}
+
+// GetNext gets the next token for a paginated response
+func (t *Transaction) GetNext() string {
+	return t.next
 }
 
 // ValidateIdempotency validates if a transaction is idempotent

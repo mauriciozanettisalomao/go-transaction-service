@@ -54,7 +54,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful operation",
                         "schema": {
-                            "$ref": "#/definitions/restapi.response"
+                            "$ref": "#/definitions/restapi.responseTransaction"
                         }
                     },
                     "403": {
@@ -199,6 +199,10 @@ const docTemplate = `{
                 "limit": {
                     "type": "integer",
                     "example": 10
+                },
+                "next": {
+                    "type": "string",
+                    "example": "http://localhost:8080/v1/transactions?limit=10\u0026next=eyJpZGVtcG9udGVuY2llS2V5IjoiMTIzNDU2Nzg5MCIsImxpbWl0IjoxMH0="
                 }
             }
         },
@@ -217,10 +221,15 @@ const docTemplate = `{
                 }
             }
         },
-        "restapi.response": {
+        "restapi.responseTransaction": {
             "type": "object",
             "properties": {
-                "data": {},
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Transaction"
+                    }
+                },
                 "metadata": {
                     "$ref": "#/definitions/restapi.Metadata"
                 }

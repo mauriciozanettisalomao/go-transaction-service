@@ -77,3 +77,7 @@ build: deps swagger-gin-gen
 run-local: build
 	@echo "==> Running $(SERVICE) locally..."
 	@./bin/$(SERVICE)
+
+deploy:
+	@echo "==> Deploying $(SERVICE) to AWS..."
+	@sam build && sam deploy --no-confirm-changeset

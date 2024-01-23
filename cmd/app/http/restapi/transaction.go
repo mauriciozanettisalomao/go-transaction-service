@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 
@@ -68,7 +69,7 @@ func (t *transactionAPI) CreateTransaction(ctx *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			limit					query		string				true	"The maximum number of records to return per page."
-//	@Success		200						{object}	response				"Successful operation"
+//	@Success		200						{object}	responseTransaction			"Successful operation"
 //	@Failure		403						{object}	errorResponse			"Forbidden error"
 //	@Failure		500						{object}	errorResponse			"Internal server error"
 //	@Router			/v1/transactions [get]
@@ -81,14 +82,18 @@ func (t *transactionAPI) ListTransactions(ctx *gin.Context) {
 	if ok {
 		limitConv, err := strconv.Atoi(limitParam)
 		if err != nil {
-			fmt.Println(err)
-
+			slog.Error("error converting limit to int",
+				"err", err,
+				"limit", limitParam,
+			)
+			handleError(ctx, err)
 		}
 		limit = limitConv
 	}
 
-	response, err := service.NewTransactionHandler(
+	response, next, err := service.NewTransactionHandler(
 		service.WithTransactionRetriever(storageLayerByEnv()),
+		service.WithNext(ctx.Query("next")),
 		service.WithLimit(limit),
 	).List(ctx)
 	if err != nil {
@@ -96,14 +101,15 @@ func (t *transactionAPI) ListTransactions(ctx *gin.Context) {
 		return
 	}
 
-	handleSuccess(ctx, response, newMeta(limit))
+	handleSuccess(ctx, response, newMeta(limit, next))
 }
 
-// not a best way to check if it is running in a lambda environment
-// it should be refactored to use a proper environment variable
+// simple way to switch between memory and dynamodb
 func storageLayerByEnv() port.TransactionHandler {
-	if _, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME"); ok {
-		return storage.NewDynamoDB()
+	if value, ok := os.LookupEnv("USE_DYNAMODB"); ok {
+		if value == "true" {
+			return storage.NewDynamoDB()
+		}
 	}
 	return storage.NewTransactionMemory()
 }

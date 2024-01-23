@@ -35,6 +35,9 @@ definitions:
       limit:
         example: 10
         type: integer
+      next:
+        example: http://localhost:8080/v1/transactions?limit=10&next=eyJpZGVtcG9udGVuY2llS2V5IjoiMTIzNDU2Nzg5MCIsImxpbWl0IjoxMH0=
+        type: string
     type: object
   restapi.errorResponse:
     properties:
@@ -46,9 +49,12 @@ definitions:
           type: string
         type: array
     type: object
-  restapi.response:
+  restapi.responseTransaction:
     properties:
-      data: {}
+      data:
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
       metadata:
         $ref: '#/definitions/restapi.Metadata'
     type: object
@@ -81,7 +87,7 @@ paths:
         "200":
           description: Successful operation
           schema:
-            $ref: '#/definitions/restapi.response'
+            $ref: '#/definitions/restapi.responseTransaction'
         "403":
           description: Forbidden error
           schema:
