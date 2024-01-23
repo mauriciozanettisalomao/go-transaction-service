@@ -76,6 +76,20 @@ curl --location 'https://{{hostname}}/v1/transactions' \
 }'
 ```
 
+### Subscribe
+
+It is possible to subscribe to receive all transactions in a specific email.
+
+```
+curl --location 'https://{{hostname}}/v1/transactions/subscribe' \
+--header 'x-api-key: ******' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "protocol": "email",
+    "endpoint": "mauriciozanetti86@gmail.com"
+}'
+```
+
 ### List transactions
 
 ```

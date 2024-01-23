@@ -123,11 +123,11 @@ func storageLayerByEnv() port.TransactionHandler {
 //	@Tags			transactions
 //	@Accept			json
 //	@Produce		json
-//	@Param			Transaction				body		domain.Transaction	true	"Create Transaction request"
-//	@Success		201						{object}	responseTransaction			"Subscription created"
+//	@Param			Transaction				body		domain.Subscription	true	"Create Transaction request"
+//	@Success		201						{object}	domain.Subscription			"Subscription created"
 //	@Failure		403						{object}	errorResponse			"Forbidden error"
 //	@Failure		500						{object}	errorResponse			"Internal server error"
-//	@Router			/v1/transactions [get]
+//	@Router			/v1/transactions/subscribe [post]
 //	@Security		X-API-Key
 func (t *transactionAPI) SubscribeListenTransactions(ctx *gin.Context) {
 
@@ -139,7 +139,7 @@ func (t *transactionAPI) SubscribeListenTransactions(ctx *gin.Context) {
 
 	if t.svcSubscription == nil {
 		t.svcSubscription = service.NewSubscriptorService(
-			service.WithSubscriptor(notification.NewSubscriptionMemory()),
+			service.WithSubscriptor(notificationLayerByEnv()),
 		)
 	}
 	err := t.svcSubscription.Subscribe(ctx, &req)
@@ -149,6 +149,16 @@ func (t *transactionAPI) SubscribeListenTransactions(ctx *gin.Context) {
 	}
 
 	handleCreatedSuccess(ctx, req)
+}
+
+// simple way to switch between memory and dynamodb
+func notificationLayerByEnv() port.Subscriptor {
+	if value, ok := os.LookupEnv("USE_SNS"); ok {
+		if value == "true" {
+			return notification.NewSubscriptionSnsTopic()
+		}
+	}
+	return notification.NewSubscriptionMemory()
 }
 
 // NewTransactionAPI creates an instance of a transaction API

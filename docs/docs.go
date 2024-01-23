@@ -30,7 +30,7 @@ const docTemplate = `{
                         "X-API-Key": []
                     }
                 ],
-                "description": "Subscribe to be notified when a new transaction is created",
+                "description": "Create transactions made by a certain user",
                 "consumes": [
                     "application/json"
                 ],
@@ -40,21 +40,19 @@ const docTemplate = `{
                 "tags": [
                     "transactions"
                 ],
-                "summary": "Subscribe to listen the the new transactions",
+                "summary": "Create a new transaction",
                 "parameters": [
                     {
-                        "description": "Create Transaction request",
-                        "name": "Transaction",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/domain.Transaction"
-                        }
+                        "type": "string",
+                        "description": "The maximum number of records to return per page.",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Subscription created",
+                    "200": {
+                        "description": "Successful operation",
                         "schema": {
                             "$ref": "#/definitions/restapi.responseTransaction"
                         }
@@ -147,9 +145,78 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/transactions/subscribe": {
+            "post": {
+                "security": [
+                    {
+                        "X-API-Key": []
+                    }
+                ],
+                "description": "Subscribe to be notified when a new transaction is created",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Subscribe to listen the the new transactions",
+                "parameters": [
+                    {
+                        "description": "Create Transaction request",
+                        "name": "Transaction",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Subscription"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Subscription created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Subscription"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden error",
+                        "schema": {
+                            "$ref": "#/definitions/restapi.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/restapi.errorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "domain.Subscription": {
+            "type": "object",
+            "required": [
+                "endpoint",
+                "protocol"
+            ],
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "protocol": {
+                    "type": "string",
+                    "enum": [
+                        "email"
+                    ]
+                }
+            }
+        },
         "domain.Transaction": {
             "type": "object",
             "required": [

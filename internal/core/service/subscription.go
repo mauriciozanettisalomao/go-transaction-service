@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"os"
 
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/domain"
 	"github.com/mauriciozanettisalomao/go-transaction-service/internal/core/port"
@@ -28,6 +29,9 @@ type subscriptorService struct {
 
 // Subscribe subscribes to a topic
 func (s *subscriptorService) Subscribe(ctx context.Context, subscription *domain.Subscription) error {
+	if value, ok := os.LookupEnv("TRANSACTION_SNS_TOPIC_ARN"); ok {
+		subscription.Topic = value
+	}
 	return s.adapter.Subscribe(ctx, subscription)
 }
 

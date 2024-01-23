@@ -32,7 +32,6 @@ setup: setup-dev
 
 swagger-gin:
 	@echo "==> Installing swagger tool..."	
-	@export GOBIN=$(go env GOPATH)/bin
 	@go get -u github.com/swaggo/swag/cmd/swag
 	@go get -u github.com/swaggo/gin-swagger
 	@go get -u github.com/swaggo/files
@@ -40,6 +39,8 @@ swagger-gin:
 
 swagger-gin-gen:
 	@echo "==> Generating swagger..."	
+	@export GOBIN=$(go env GOPATH)/bin
+	@export PATH=$(go env GOPATH)/bin:$PATH
 	@swag init -g cmd/app/http/main.go
 
 lint: 
@@ -62,7 +63,7 @@ deps:
 prep:
 	@mkdir -p bin/
 
-build-lambda: prep deps swagger-gin-gen
+build-lambda: prep deps
 	@echo "==> Building linux arm64 static AWS binary for linux using go $(shell go version)..."
 	env GIN_MODE=release CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/$(SERVICE) -a $(LDFLAGS) ./cmd/app/lambda/main.go	
 
@@ -71,7 +72,7 @@ package-lambda: clean build-lambda
 	@cd bin && rm -f $(SERVICE).zip && zip -r $(SERVICE).zip . && cd $(ROOT_DIR)
 
 build-mac: build
-build: deps swagger-gin-gen
+build: deps
 	@echo "==> Building $(GO_BUILD_ARCH) static binary for $(BUILD_HOST) using go $(shell go version)..."
 	env CGO_ENABLED=0 GOOS=$(BUILD_HOST) GOARCH=$(GO_BUILD_ARCH) go build -o bin/$(SERVICE) -a $(LDFLAGS) ./cmd/app/http/main.go	
 	chmod +x bin/$(SERVICE)

@@ -44,12 +44,13 @@ Resources:
   EventRule: 
     Type: AWS::Events::Rule
     Properties: 
+      EventBusName: !Ref ApplicationEventBus
       Description: "EventRule"
       EventPattern: 
         account: 
           - !Sub '${AWS::AccountId}'
         source:
-          - "transaction.notification"
+          - "demo.transaction"
       Targets: 
         - Arn: !Ref TransactionSnsTopic
           Id: "SNStopic"
@@ -144,6 +145,7 @@ Resources:
       Environment:
         Variables:
           USE_DYNAMODB: "true"
+          USE_SNS: "true"
           TRANSACTION_SNS_TOPIC_ARN: !Ref TransactionSnsTopic
       Policies:
         - SNSCrudPolicy:

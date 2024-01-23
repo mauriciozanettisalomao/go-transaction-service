@@ -1,4 +1,16 @@
 definitions:
+  domain.Subscription:
+    properties:
+      endpoint:
+        type: string
+      protocol:
+        enum:
+        - email
+        type: string
+    required:
+    - endpoint
+    - protocol
+    type: object
   domain.Transaction:
     properties:
       amount:
@@ -74,19 +86,18 @@ paths:
     get:
       consumes:
       - application/json
-      description: Subscribe to be notified when a new transaction is created
+      description: Create transactions made by a certain user
       parameters:
-      - description: Create Transaction request
-        in: body
-        name: Transaction
+      - description: The maximum number of records to return per page.
+        in: query
+        name: limit
         required: true
-        schema:
-          $ref: '#/definitions/domain.Transaction'
+        type: string
       produces:
       - application/json
       responses:
-        "201":
-          description: Subscription created
+        "200":
+          description: Successful operation
           schema:
             $ref: '#/definitions/restapi.responseTransaction'
         "403":
@@ -99,7 +110,7 @@ paths:
             $ref: '#/definitions/restapi.errorResponse'
       security:
       - X-API-Key: []
-      summary: Subscribe to listen the the new transactions
+      summary: Create a new transaction
       tags:
       - transactions
     post:
@@ -150,6 +161,38 @@ paths:
       security:
       - X-API-Key: []
       summary: Create a new transaction
+      tags:
+      - transactions
+  /v1/transactions/subscribe:
+    post:
+      consumes:
+      - application/json
+      description: Subscribe to be notified when a new transaction is created
+      parameters:
+      - description: Create Transaction request
+        in: body
+        name: Transaction
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Subscription'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Subscription created
+          schema:
+            $ref: '#/definitions/domain.Subscription'
+        "403":
+          description: Forbidden error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/restapi.errorResponse'
+      security:
+      - X-API-Key: []
+      summary: Subscribe to listen the the new transactions
       tags:
       - transactions
 securityDefinitions:
